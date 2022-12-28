@@ -1,0 +1,38 @@
+version: "3.6"
+
+services:
+  postgres:
+    env_file:
+      $DB_ENV_PATH
+    restart: always
+
+  client:
+    image: $CI_REGISTRY_IMAGE/sibumi-client:latest
+    environment:
+      - NODE_ENV=production
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.client.rule=Host(`62.109.13.183`)"
+      - "traefik.http.routers.client-backend.entrypoints=web"
+
+  server:
+    image: $CI_REGISTRY_IMAGE/sibumi-server:latest
+    env_file:
+      $SERVER_ENV_PATH
+    environment:
+      - NODE_ENV=production
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`62.109.13.183`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.routers.backend.middlewares=strip-api"
+      - "traefik.http.middlewares.strip-api.stripprefix.prefixes=/api"
+
+  traefik:
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
